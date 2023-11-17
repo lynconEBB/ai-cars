@@ -1,212 +1,118 @@
-import math
-import sys
-from enum import Enum
 import pygame
-
-WIDTH = 1366
-HEIGHT = 768
-
-
-def blit_rotate_center(screen, image, top_left, angle):
-    rotated_image = pygame.transform.rotate(image, angle)
-    new_rect = rotated_image.get_rect(center=top_left)
-    screen.blit(rotated_image, new_rect)
+from car import Car
+from car import CarAction
+from collections import deque
 
 
-class CarAction(Enum):
-    LEFT = 0
-    RIGHT = 1
-    BREAK = 2
-    ACCELERATE = 3
-    IDLE = 4
+class Game:
+    WIDTH = 1366
+    HEIGHT = 768
+    GENERATION = 0
 
+    def __init__(self, cars):
+        pygame.init()
+        Game.GENERATION += 1
 
-class Car:
+        self.total_time = 0
+        self.cars = cars
+        self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
 
-    def __init__(self):
-        self.sprite = pygame.image.load('./imgs/green.png')
-        self.acceleration = 0.1
-        self.break_strength = 0.8
-        self.max_speed = 10
+        self.clock = pygame.time.Clock()
 
-        self.position = [620, 675]
-        self.angle = -90
-        self.speed = 0
-        self.angular_speed = 2.5
+        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map0.png").convert(),(Game.WIDTH, Game.HEIGHT))
 
-        self.action = CarAction.IDLE
+        self.TRACK_MASK = self.MAP.copy()
+        self.TRACK_MASK.set_colorkey((255, 255, 255))
+        self.TRACK_MASK = pygame.mask.from_surface(self.TRACK_MASK)
+        self.TRACK_MASK.invert()
 
-        self.radar_count = 5
-        self.radar_dists = []
-        self.radar_end_positions = []
+        self.FINISH_MASK = self.MAP.copy()
+        self.FINISH_MASK.set_colorkey((0, 0, 255))
+        self.FINISH_MASK = pygame.mask.from_surface(self.FINISH_MASK)
+        self.FINISH_MASK.invert()
 
-        self.distance = 0
-        self.time = 0
+        self.FLOODFILL_TILE_SIZE = 20
+        self.FLOODFILL_MASK = self.TRACK_MASK.copy()
+        self.FLOODFILL_MASK.invert()
+        self.SQUARE_MASK = pygame.mask.Mask((self.FLOODFILL_TILE_SIZE, self.FLOODFILL_TILE_SIZE), True)
 
-    def draw(self, screen):
-        blit_rotate_center(screen, self.sprite, self.position, self.angle)
-        self.draw_radar(screen)
+        self.queue = deque()
+        self.queue.append((550, 650))
 
-    def draw_radar(self, screen):
-        for radar in self.radar_end_positions:
-            radar_end = radar
-            pygame.draw.line(screen, (0, 255, 0), self.position, radar_end, 1)
-            pygame.draw.circle(screen, (0, 255, 0), radar_end, 5)
+    def check_collisions(self, car):
+        car.check_radars(self.TRACK_MASK)
 
-    def is_colliding(self, track_mask):
-        rotated_sprite = pygame.transform.rotate(self.sprite, self.angle)
-        draw_rect = rotated_sprite.get_rect(center=self.position)
-        car_mask = pygame.mask.from_surface(rotated_sprite)
-        return track_mask.overlap(car_mask, draw_rect.topleft)
+        if car.is_colliding(self.TRACK_MASK):
+            car.is_alive = False
+        if car.is_colliding(self.FINISH_MASK):
+            car.has_completed = True
 
-    def check_radars(self, map_mask):
-        radar_angle_offset = self.angle
-        self.radar_end_positions.clear()
-        self.radar_dists.clear()
+    def tick(self):
+        self.screen.blit(self.MAP, (0, 0))
 
-        for i in range(0, self.radar_count):
-            length = 0
-            x = int(self.position[0] + math.cos(math.radians(360 - radar_angle_offset)))
-            y = int(self.position[1] + math.sin(math.radians(360 - radar_angle_offset)))
+        for car in self.cars:
+            car.draw(self.screen)
 
-            while not map_mask.get_at((x, y)) == 1 and length < 300:
-                length = length + 1
-                x = int(self.position[0] + math.cos(math.radians(360 - radar_angle_offset)) * length)
-                y = int(self.position[1] + math.sin(math.radians(360 - radar_angle_offset)) * length)
+        self.screen.blit(self.FLOODFILL_MASK.to_surface(), (0,0))
+        pygame.display.flip()
+        self.clock.tick(60)
+        self.total_time += self.clock.get_time()
 
-            dist = int(math.sqrt(math.pow(x - self.position[0], 2) + math.pow(y - self.position[1], 2)))
-            self.radar_end_positions.append((x, y))
-            self.radar_dists.append(dist)
+    def find_neighbors(self, element):
+        possible_neighbors = [
+            (element[0] + self.FLOODFILL_TILE_SIZE, element[1]),
+            (element[0] - self.FLOODFILL_TILE_SIZE, element[1]),
+            (element[0], element[1] + self.FLOODFILL_TILE_SIZE),
+            (element[0], element[1] - self.FLOODFILL_TILE_SIZE),
+        ]
 
-            radar_angle_offset += 180 / (self.radar_count - 1)
+        size_x, size_y = self.TRACK_MASK.get_size()
+        found = []
+        for possible_neighbor in possible_neighbors:
+            if 0 <= possible_neighbor[0] <= size_x and 0 <= possible_neighbor[1] <= size_y:
+                if self.FLOODFILL_MASK.overlap(self.SQUARE_MASK, possible_neighbor):
+                    found.append(possible_neighbor)
 
-    def rotate(self, left=False, right=False):
-        if left:
-            self.angle += self.angular_speed
-        elif right:
-            self.angle -= self.angular_speed
+        return found
 
-    def add_speed(self):
-        self.speed = min(self.speed + self.acceleration, self.max_speed)
+    def flood_fill(self):
+        if self.total_time < 2000 or len(self.queue) <= 0:
+            return
 
-    def reduce_speed(self):
-        self.speed = max(self.speed - self.acceleration, 0)
+        element = self.queue.popleft()
+        neighbors = self.find_neighbors(element)
+        for neighbor in neighbors:
+            self.FLOODFILL_MASK.erase(self.SQUARE_MASK, neighbor)
+            self.queue.append(neighbor)
 
-    def active_break(self):
-        self.speed = max(self.speed - self.break_strength, 0)
+    def print_dists(self, dists):
+        title_font = pygame.font.Font("freesansbold.ttf", 15)
+        text_surface = title_font.render("Radar", True, (0, 255, 0, 255))
+        self.screen.blit(text_surface, (20, 20))
 
-    def update(self, delta_time):
-        self.distance += self.speed
-        self.time += delta_time
+        text_font = pygame.font.Font("freesansbold.ttf", 10)
+        y = 35
+        count = 1
+        for dist in dists:
+            text_surface = text_font.render("r" + str(count) + ": " + str(dist), True, (0, 0, 0, 255))
+            self.screen.blit(text_surface, (20, y))
+            y += 10
+            count += 1
 
-        self.position[1] -= math.cos(math.radians(self.angle)) * self.speed
-        self.position[0] -= math.sin(math.radians(self.angle)) * self.speed
+    def print_states(self, car):
+        tittle_font = pygame.font.Font("freesansbold.ttf", 15)
+        text_surface = tittle_font.render("States", True, (255, 0, 0, 255))
+        self.screen.blit(text_surface, (100, 20))
 
-    def get_score(self):
-        if self.time == 0:
-            return 0
-        return self.distance / (self.time / 1000)
+        text_font = pygame.font.Font("freesansbold.ttf", 10)
+        text_surface = text_font.render("Action: " + car.action.name, True, (0, 0, 0, 255))
+        self.screen.blit(text_surface, (100, 35))
 
+        text_surface = text_font.render("Speed: " + "{:.2f}".format(car.speed), True, (0, 0, 0, 255))
+        self.screen.blit(text_surface, (100, 45))
 
-def poll_events(car):
-    keys = pygame.key.get_pressed()
-    moved = False
+        text_surface = text_font.render("Score: " + "{:.2f}".format(car.get_score()), True, (0, 0, 0, 255))
+        self.screen.blit(text_surface, (100, 55))
 
-    if keys[pygame.K_UP]:
-        car.add_speed()
-        car.action = CarAction.ACCELERATE
-        moved = True
-    if keys[pygame.K_DOWN]:
-        car.action = CarAction.BREAK
-        car.active_break()
-    if keys[pygame.K_LEFT]:
-        car.action = CarAction.LEFT
-        car.rotate(left=True)
-    if keys[pygame.K_RIGHT]:
-        car.action = CarAction.RIGHT
-        car.rotate(right=True)
-
-    if not keys[pygame.K_RIGHT] and not keys[pygame.K_DOWN] and not keys[pygame.K_LEFT] and not keys[pygame.K_UP]:
-        car.action = CarAction.IDLE
-
-    if not moved:
-        car.reduce_speed()
-
-
-def print_dists(screen, dists):
-    title_font = pygame.font.Font("freesansbold.ttf", 15)
-    text_surface = title_font.render("Radar", True, (0, 255, 0, 255))
-    screen.blit(text_surface, (20, 20))
-
-    text_font = pygame.font.Font("freesansbold.ttf", 10)
-    y = 35
-    count = 1
-    for dist in dists:
-        text_surface = text_font.render("r" + str(count) + ": " + str(dist), True, (0, 0, 0, 255))
-        screen.blit(text_surface, (20, y))
-        y += 10
-        count += 1
-
-
-def print_states(screen, car):
-    tittle_font = pygame.font.Font("freesansbold.ttf", 15)
-    text_surface = tittle_font.render("States", True, (255, 0, 0, 255))
-    screen.blit(text_surface, (100, 20))
-
-    text_font = pygame.font.Font("freesansbold.ttf", 10)
-    text_surface = text_font.render("Action: " + car.action.name, True, (0, 0, 0, 255))
-    screen.blit(text_surface, (100, 35))
-
-    text_surface = text_font.render("Speed: " + "{:.2f}".format(car.speed), True, (0, 0, 0, 255))
-    screen.blit(text_surface, (100, 45))
-
-    text_surface = text_font.render("Score: " + "{:.2f}".format(car.get_score()), True, (0, 0, 0, 255))
-    screen.blit(text_surface, (100, 55))
-
-
-# Main Code
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-clock = pygame.time.Clock()
-
-game_map = pygame.image.load('./imgs/map1.png').convert()
-game_map = pygame.transform.scale(game_map, (1366, 768))
-
-MAP_MASK = game_map.copy()
-MAP_MASK.set_colorkey((255, 255, 255))
-MAP_MASK = pygame.mask.from_surface(MAP_MASK)
-MAP_MASK.invert()
-
-FINISH_MASK = game_map.copy()
-FINISH_MASK.set_colorkey((0, 0, 255))
-FINISH_MASK = pygame.mask.from_surface(FINISH_MASK)
-FINISH_MASK.invert()
-
-car = Car()
-is_game_running = True
-
-counter = 0
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit(0)
-
-    if (is_game_running):
-        poll_events(car)
-        car.update(clock.get_time())
-        car.check_radars(MAP_MASK)
-
-        if car.is_colliding(MAP_MASK):
-            car = Car()
-
-        if car.is_colliding(FINISH_MASK):
-            is_game_running = False
-
-    screen.blit(game_map, (0, 0))
-    car.draw(screen)
-
-    print_dists(screen, car.radar_dists)
-    print_states(screen, car)
-
-    pygame.display.flip()
-    clock.tick(60)
+    def poll_events(self):
+        pass
