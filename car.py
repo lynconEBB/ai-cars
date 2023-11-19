@@ -11,24 +11,18 @@ class CarAction(Enum):
     IDLE = 4
 
 
-def blit_rotate_center(screen, image, top_left, angle):
-    rotated_image = pygame.transform.rotate(image, angle)
-    new_rect = rotated_image.get_rect(center=top_left)
-    screen.blit(rotated_image, new_rect)
-
-
 class Car:
 
     def __init__(self):
         self.sprite = pygame.image.load('./imgs/green.png')
-        self.acceleration = 0.1
+        self.acceleration = 0.5
         self.break_strength = 0.8
-        self.max_speed = 5
+        self.max_speed = 10
 
         self.position = [620, 675]
         self.angle = -90
         self.speed = 0
-        self.angular_speed = 10
+        self.angular_speed = 30
 
         self.is_alive = True
         self.has_completed = False
@@ -41,10 +35,11 @@ class Car:
         self.radar_end_positions = []
 
         self.distance = 0
-        self.time = 0
 
     def draw(self, screen):
-        blit_rotate_center(screen, self.sprite, self.position, self.angle)
+        rotated_image = pygame.transform.rotate(self.sprite, self.angle)
+        new_rect = rotated_image.get_rect(center=self.position)
+        screen.blit(rotated_image, new_rect)
         if self.is_alive:
             self.draw_radar(screen)
 
@@ -81,22 +76,19 @@ class Car:
 
             radar_angle_offset += 180 / (self.radar_count - 1)
 
-    def rotate(self, left=False, right=False):
+    def rotate(self, left=False, right=False ):
         if left:
             self.angle += self.angular_speed
         elif right:
             self.angle -= self.angular_speed
 
     def add_speed(self):
-        self.speed = min(self.speed + self.acceleration, self.max_speed)
+        self.speed = min((self.speed + self.acceleration), self.max_speed)
 
     def reduce_speed(self):
-        self.speed = max(self.speed - self.acceleration, 0)
+        self.speed = max((self.speed - self.acceleration), 0)
 
-    def active_break(self):
-        self.speed = max(self.speed - self.break_strength, 0)
-
-    def update(self, choice, delta_time):
+    def update(self, choice):
         action = CarAction(choice)
         if action == CarAction.ACCELERATE:
             self.add_speed()
@@ -108,7 +100,6 @@ class Car:
             self.reduce_speed()
 
         self.distance += self.speed
-        self.time += delta_time
 
         self.position[1] -= math.cos(math.radians(self.angle)) * self.speed
         self.position[0] -= math.sin(math.radians(self.angle)) * self.speed
@@ -121,7 +112,7 @@ class Car:
         state.append(self.speed / self.max_speed)
         return state
 
-    def get_fitness(self):
-        if self.time == 0:
+    def get_fitness(self, total_time):
+        if total_time == 0:
             return 0
-        return self.distance / (self.time / 1000)
+        return self.distance - total_time * 0.01

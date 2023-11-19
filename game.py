@@ -19,21 +19,25 @@ class Game:
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
 
         self.clock = pygame.time.Clock()
-        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map0.png").convert(), (Game.WIDTH, Game.HEIGHT))
+        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map1.png").convert(), (Game.WIDTH, Game.HEIGHT))
 
         self.TRACK_MASK = self.MAP.copy()
         self.TRACK_MASK.set_colorkey((255, 255, 255))
         self.TRACK_MASK = pygame.mask.from_surface(self.TRACK_MASK)
-        self.TRACK_MASK.invert()
+
+        self.COLLISION_MASK = self.TRACK_MASK.copy()
+        self.COLLISION_MASK.invert()
+        self.dt = 0
 
         self.FINISH_MASK = self.MAP.copy()
         self.FINISH_MASK.set_colorkey((0, 0, 255))
         self.FINISH_MASK = pygame.mask.from_surface(self.FINISH_MASK)
         self.FINISH_MASK.invert()
 
+        self.collision_mask = self.COLLISION_MASK.copy
+
         self.FLOODFILL_TILE_SIZE = 20
         self.FLOODFILL_MASK = self.TRACK_MASK.copy()
-        self.FLOODFILL_MASK.invert()
         self.SQUARE_MASK = pygame.mask.Mask((self.FLOODFILL_TILE_SIZE, self.FLOODFILL_TILE_SIZE), True)
 
         self.queue = deque()
@@ -43,26 +47,31 @@ class Game:
         if not car.is_alive or car.has_completed:
             return
 
-        aa = self.FLOODFILL_MASK.copy()
-        aa.invert()
-        car.check_radars(aa)
-
-        if car.is_colliding(aa):
+        car.check_radars(self.COLLISION_MASK)
+        if car.is_colliding(self.COLLISION_MASK):
             car.is_alive = False
         if car.is_colliding(self.FINISH_MASK):
-            self.genomes[i][1].fitness += 200000 - self.total_time*10
+            self.genomes[i][1].fitness += 200000
             car.has_completed = True
 
     def tick(self):
         self.screen.blit(self.MAP, (0, 0))
 
-        for car in self.cars:
+        tittle_font = pygame.font.Font("freesansbold.ttf", 15)
+
+        for i, car in enumerate(self.cars):
+            text_surface = tittle_font.render("{:.2f}".format(self.genomes[i][1].fitness), True, (255, 0, 0, 255))
+            self.screen.blit(text_surface, (car.position[0] - 20, car.position[1] - 40))
             car.draw(self.screen)
 
-        # self.screen.blit(self.FLOODFILL_MASK.to_surface(), (0,0))
+        wave = self.COLLISION_MASK.overlap_mask(self.TRACK_MASK, (0,0))
+        self.screen.blit(wave.to_surface(setcolor=(255,255,0), unsetcolor=(0,0,0,0)), (0, 0))
+        # self.screen.blit(self.COLLISION_MASK.to_surface(), (0, 0))
+        self.print_generation()
         pygame.display.flip()
-        self.clock.tick(60)
-        self.total_time += self.clock.get_time()
+
+        self.dt = self.clock.tick(60)
+        self.total_time += self.dt
 
     def find_neighbors(self, element):
         possible_neighbors = [
@@ -72,7 +81,7 @@ class Game:
             (element[0], element[1] - self.FLOODFILL_TILE_SIZE),
         ]
 
-        size_x, size_y = self.TRACK_MASK.get_size()
+        size_x, size_y = self.COLLISION_MASK.get_size()
         found = []
         for possible_neighbor in possible_neighbors:
             if 0 <= possible_neighbor[0] <= size_x and 0 <= possible_neighbor[1] <= size_y:
@@ -82,7 +91,7 @@ class Game:
         return found
 
     def flood_fill(self):
-        if self.total_time < 2000 or len(self.queue) <= 0:
+        if self.total_time < 500 or len(self.queue) <= 0:
             return
 
         element = self.queue.popleft()
@@ -90,6 +99,9 @@ class Game:
         for neighbor in neighbors:
             self.FLOODFILL_MASK.erase(self.SQUARE_MASK, neighbor)
             self.queue.append(neighbor)
+
+        self.COLLISION_MASK = self.FLOODFILL_MASK.copy()
+        self.COLLISION_MASK.invert()
 
     def print_dists(self, dists):
         title_font = pygame.font.Font("freesansbold.ttf", 15)
@@ -105,6 +117,12 @@ class Game:
             y += 10
             count += 1
 
+    def print_generation(self):
+        tittle_font = pygame.font.Font("freesansbold.ttf", 25)
+        text_surface = tittle_font.render("Generation " + str(Game.GENERATION), True, (255, 0 , 0, 255))
+        rect = text_surface.get_rect()
+        self.screen.blit(text_surface, ((Game.WIDTH - rect.width / 2) / 2, 20))
+
     def print_states(self, car):
         tittle_font = pygame.font.Font("freesansbold.ttf", 15)
         text_surface = tittle_font.render("States", True, (255, 0, 0, 255))
@@ -119,6 +137,3 @@ class Game:
 
         text_surface = text_font.render("Score: " + "{:.2f}".format(car.get_score()), True, (0, 0, 0, 255))
         self.screen.blit(text_surface, (100, 55))
-
-    def poll_events(self):
-        pass

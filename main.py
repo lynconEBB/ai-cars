@@ -22,8 +22,6 @@ def run_simulation(genomes, config):
         cars.append(Car())
         count += 1
 
-    print(count)
-
     # Create game instance
     game = Game(cars, genomes)
 
@@ -39,9 +37,9 @@ def run_simulation(genomes, config):
             if car.is_alive and not car.has_completed:
                 remaining_cars += 1
                 output = nets[i].activate(car.get_state())
-                car.update(output.index(max(output)), game.clock.get_time())
+                car.update(output.index(max(output)))
+                genomes[i][1].fitness = car.get_fitness(game.total_time)
                 game.check_collisions(car, i)
-                genomes[i][1].fitness += car.get_fitness()
 
         if remaining_cars == 0:
             break
