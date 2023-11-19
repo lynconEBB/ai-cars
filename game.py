@@ -9,17 +9,17 @@ class Game:
     HEIGHT = 768
     GENERATION = 0
 
-    def __init__(self, cars):
+    def __init__(self, cars, genomes):
         pygame.init()
         Game.GENERATION += 1
 
         self.total_time = 0
         self.cars = cars
+        self.genomes = genomes
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
 
         self.clock = pygame.time.Clock()
-
-        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map0.png").convert(),(Game.WIDTH, Game.HEIGHT))
+        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map0.png").convert(), (Game.WIDTH, Game.HEIGHT))
 
         self.TRACK_MASK = self.MAP.copy()
         self.TRACK_MASK.set_colorkey((255, 255, 255))
@@ -39,12 +39,18 @@ class Game:
         self.queue = deque()
         self.queue.append((550, 650))
 
-    def check_collisions(self, car):
-        car.check_radars(self.TRACK_MASK)
+    def check_collisions(self, car, i):
+        if not car.is_alive or car.has_completed:
+            return
 
-        if car.is_colliding(self.TRACK_MASK):
+        aa = self.FLOODFILL_MASK.copy()
+        aa.invert()
+        car.check_radars(aa)
+
+        if car.is_colliding(aa):
             car.is_alive = False
         if car.is_colliding(self.FINISH_MASK):
+            self.genomes[i][1].fitness += 200000 - self.total_time*10
             car.has_completed = True
 
     def tick(self):
@@ -53,7 +59,7 @@ class Game:
         for car in self.cars:
             car.draw(self.screen)
 
-        self.screen.blit(self.FLOODFILL_MASK.to_surface(), (0,0))
+        # self.screen.blit(self.FLOODFILL_MASK.to_surface(), (0,0))
         pygame.display.flip()
         self.clock.tick(60)
         self.total_time += self.clock.get_time()

@@ -23,12 +23,12 @@ class Car:
         self.sprite = pygame.image.load('./imgs/green.png')
         self.acceleration = 0.1
         self.break_strength = 0.8
-        self.max_speed = 10
+        self.max_speed = 5
 
         self.position = [620, 675]
         self.angle = -90
         self.speed = 0
-        self.angular_speed = 2.5
+        self.angular_speed = 10
 
         self.is_alive = True
         self.has_completed = False

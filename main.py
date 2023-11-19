@@ -25,7 +25,7 @@ def run_simulation(genomes, config):
     print(count)
 
     # Create game instance
-    game = Game(cars)
+    game = Game(cars, genomes)
 
     while True:
         for event in pygame.event.get():
@@ -40,7 +40,7 @@ def run_simulation(genomes, config):
                 remaining_cars += 1
                 output = nets[i].activate(car.get_state())
                 car.update(output.index(max(output)), game.clock.get_time())
-                game.check_collisions(car)
+                game.check_collisions(car, i)
                 genomes[i][1].fitness += car.get_fitness()
 
         if remaining_cars == 0:
