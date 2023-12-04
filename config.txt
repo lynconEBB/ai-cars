@@ -2,11 +2,11 @@
 fitness_criterion     = max
 fitness_threshold     = 100000000
 pop_size              = 30
-reset_on_extinction   = True
+reset_on_extinction   = False
 
 [DefaultStagnation]
-species_fitness_func = max
-max_stagnation       = 10
+species_fitness_func = mean
+max_stagnation       = 5
 species_elitism      = 2
 
 [DefaultReproduction]
@@ -29,28 +29,25 @@ num_outputs             = 4
 
 # node activation options
 activation_default      = tanh
-activation_mutate_rate  = 0.01
 activation_options      = tanh
+activation_mutate_rate  = 0.01
 
 # node aggregation options
 aggregation_default     = sum
-aggregation_mutate_rate = 0.01
 aggregation_options     = sum
+aggregation_mutate_rate = 0.01
 
-# connection add/remove rates
+# Mutation
 conn_add_prob           = 0.5
 conn_delete_prob        = 0.5
+node_add_prob           = 0.2
+node_delete_prob        = 0.2
 
 # connection enable options
 enabled_default         = True
 enabled_mutate_rate     = 0.01
-
 feed_forward            = True
 initial_connection      = full
-
-# node add/remove rates
-node_add_prob           = 0.2
-node_delete_prob        = 0.2
 
 # Non-Structural Mutations
 # node response options

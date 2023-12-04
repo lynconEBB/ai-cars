@@ -1,7 +1,8 @@
 import sys
-from collections import deque
+import pickle
 
 import neat
+import visualize
 import pygame
 from game import Game
 from car import Car
@@ -45,14 +46,28 @@ def run_simulation(genomes, config):
             break
 
         game.tick()
+        if pygame.key.get_pressed()[pygame.K_t]:
+            raise Exception("Forced stop")
+
 
 
 CONFIG_PATH = "./config.txt"
 neat_config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
                                  neat.DefaultStagnation, CONFIG_PATH)
 population = neat.Population(neat_config)
-population.add_reporter(neat.StdOutReporter(True))
 stats = neat.StatisticsReporter()
 population.add_reporter(stats)
+population.add_reporter(neat.StdOutReporter(True))
 
-population.run(run_simulation, 1000)
+# evaluator = neat.ParallelEvaluator(multiprocessing.cpu_count(), run_simulation)
+
+try:
+    winner = population.run(run_simulation, 1000)
+except Exception as e:
+    pass
+
+visualize.plot_stats(stats, True, True, "fitness.svg")
+visualize.plot_species(stats, True, "species.svg")
+
+with open('winner', 'wb') as f:
+    pickle.dump(winner, f)

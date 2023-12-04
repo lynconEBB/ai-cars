@@ -1,6 +1,4 @@
 import pygame
-from car import Car
-from car import CarAction
 from collections import deque
 
 
