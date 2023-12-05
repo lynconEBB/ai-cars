@@ -8,9 +8,11 @@ from game import Game
 from car import Car
 from car import CarAction
 
+MAX_GENOME = None
 
 def run_simulation(genomes, config):
     # Create neural networks
+
     nets = []
     cars = []
 
@@ -24,8 +26,8 @@ def run_simulation(genomes, config):
         count += 1
 
     # Create game instance
-    game = Game(cars, genomes)
-
+    game = Game(cars, genomes, "map2")
+    forcedStop = False
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -47,8 +49,16 @@ def run_simulation(genomes, config):
 
         game.tick()
         if pygame.key.get_pressed()[pygame.K_t]:
-            raise Exception("Forced stop")
+           forcedStop = True
 
+    if forcedStop:
+        global MAX_GENOME
+        MAX_GENOME = genomes[0][1]
+        for genome in genomes:
+            if genome[1].fitness > MAX_GENOME.fitness:
+                MAX_GENOME = genome[1]
+
+        raise Exception("Forced stop")
 
 
 CONFIG_PATH = "./config.txt"
@@ -59,12 +69,11 @@ stats = neat.StatisticsReporter()
 population.add_reporter(stats)
 population.add_reporter(neat.StdOutReporter(True))
 
-# evaluator = neat.ParallelEvaluator(multiprocessing.cpu_count(), run_simulation)
-
+winner = None
 try:
-    winner = population.run(run_simulation, 1000)
+    winner = population.run(run_simulation, 200)
 except Exception as e:
-    pass
+    winner = MAX_GENOME
 
 visualize.plot_stats(stats, True, True, "fitness.svg")
 visualize.plot_species(stats, True, "species.svg")

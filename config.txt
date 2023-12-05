@@ -2,17 +2,16 @@
 fitness_criterion     = max
 fitness_threshold     = 100000000
 pop_size              = 30
-reset_on_extinction   = False
+reset_on_extinction   = True
 
 [DefaultStagnation]
-species_fitness_func = mean
-max_stagnation       = 5
+species_fitness_func = max
+max_stagnation       = 20
 species_elitism      = 2
 
 [DefaultReproduction]
-elitism            = 2
+elitism            = 3
 survival_threshold = 0.2
-min_species_size   = 2
 
 [DefaultSpeciesSet]
 compatibility_threshold = 2.0
@@ -37,17 +36,17 @@ aggregation_default     = sum
 aggregation_options     = sum
 aggregation_mutate_rate = 0.01
 
-# Mutation
-conn_add_prob           = 0.5
-conn_delete_prob        = 0.5
-node_add_prob           = 0.2
-node_delete_prob        = 0.2
-
 # connection enable options
 enabled_default         = True
 enabled_mutate_rate     = 0.01
 feed_forward            = True
 initial_connection      = full
+
+# Structural Mutation
+conn_add_prob           = 0.5
+conn_delete_prob        = 0.5
+node_add_prob           = 0.2
+node_delete_prob        = 0.2
 
 # Non-Structural Mutations
 # node response options

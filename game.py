@@ -7,7 +7,7 @@ class Game:
     HEIGHT = 768
     GENERATION = 0
 
-    def __init__(self, cars, genomes):
+    def __init__(self, cars, genomes, map_name):
         pygame.init()
         Game.GENERATION += 1
 
@@ -17,9 +17,9 @@ class Game:
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
 
         self.clock = pygame.time.Clock()
-        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/map1.png").convert(), (Game.WIDTH, Game.HEIGHT))
+        self.MAP = pygame.transform.scale(pygame.image.load("./imgs/" + map_name + ".png").convert(), (Game.WIDTH, Game.HEIGHT))
 
-        self.TRACK_MASK = self.MAP.copy()
+        self.TRACK_MASK = pygame.transform.scale(pygame.image.load("./imgs/" + map_name + "_col" + ".png").convert(), (Game.WIDTH, Game.HEIGHT))
         self.TRACK_MASK.set_colorkey((255, 255, 255))
         self.TRACK_MASK = pygame.mask.from_surface(self.TRACK_MASK)
 
