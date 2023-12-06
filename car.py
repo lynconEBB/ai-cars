@@ -27,7 +27,7 @@ class Car:
         self.is_alive = True
         self.has_completed = False
 
-        self.radar_count = 5
+        self.radar_count = 10
         self.max_radar_length = 300
         self.radar_dists = []
         for i in range(0, self.radar_count):

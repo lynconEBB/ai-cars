@@ -26,7 +26,7 @@ def run_simulation(genomes, config):
         count += 1
 
     # Create game instance
-    game = Game(cars, genomes, "map2")
+    game = Game(cars, genomes, "map5")
     forcedStop = False
     while True:
         for event in pygame.event.get():
@@ -71,12 +71,12 @@ population.add_reporter(neat.StdOutReporter(True))
 
 winner = None
 try:
-    winner = population.run(run_simulation, 200)
+    winner = population.run(run_simulation, 1000)
 except Exception as e:
     winner = MAX_GENOME
 
-visualize.plot_stats(stats, True, True, "fitness.svg")
-visualize.plot_species(stats, True, "species.svg")
+visualize.plot_stats(stats, True, True, "fitness.png")
+visualize.plot_species(stats, True, "species.png")
 
 with open('winner', 'wb') as f:
     pickle.dump(winner, f)

@@ -1,6 +1,7 @@
 import pickle
 import neat
 import pygame
+import visualize
 from game import Game
 from car import Car
 import sys
@@ -10,7 +11,7 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-with open('winner', 'rb') as f:
+with open('imgs/Train3/winner', 'rb') as f:
     c = pickle.load(f)
 
 print("Loaded genome")
@@ -31,12 +32,19 @@ genomes = [[net, dotdict(fitness = 0)]]
 print(genomes[0][1].fitness)
 print(genomes)
 cars.append(Car())
-game = Game(cars, genomes, "map4")
+game = Game(cars, genomes, "map5")
+count = 0
 
 while True:
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit(0)
+
+    if count < 2000:
+        game.clock.tick(60)
+        count += game.clock.get_time()
+        continue
 
     game.flood_fill()
 

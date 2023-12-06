@@ -17,13 +17,12 @@ def plot_stats(statistics, ylog=False, view=False, filename='avg_fitness.svg'):
     avg_fitness = np.array(statistics.get_fitness_mean())
     stdev_fitness = np.array(statistics.get_fitness_stdev())
 
-    plt.plot(generation, avg_fitness, 'b-', label="average")
-    # plt.plot(generation, avg_fitness - stdev_fitness, 'g-.', label="-1 sd")
-    plt.plot(generation, avg_fitness + stdev_fitness, 'g-.', label="+1 sd")
-    plt.plot(generation, best_fitness, 'r-', label="best")
+    plt.plot(generation, avg_fitness, 'b-', label="Média")
+    plt.plot(generation, avg_fitness + stdev_fitness, 'g-.', label="Desvio padrão")
+    plt.plot(generation, best_fitness, 'r-', label="Melhor")
 
-    plt.title("Population's average and best fitness")
-    plt.xlabel("Generations")
+    plt.title("Fitness média e melhor da população")
+    plt.xlabel("Gerações")
     plt.ylabel("Fitness")
     plt.grid()
     plt.legend(loc="best")
@@ -35,52 +34,6 @@ def plot_stats(statistics, ylog=False, view=False, filename='avg_fitness.svg'):
         plt.show()
 
     plt.close()
-
-
-def plot_spikes(spikes, view=False, filename=None, title=None):
-    """ Plots the trains for a single spiking neuron. """
-    if plt is None:
-        warnings.warn("This display is not available due to a missing optional dependency (matplotlib)")
-        return
-
-    t_values = [t for t, I, v, u in spikes]
-    v_values = [v for t, I, v, u in spikes]
-    u_values = [u for t, I, v, u in spikes]
-    I_values = [I for t, I, v, u in spikes]
-
-    fig = plt.figure()
-    plt.subplot(3, 1, 1)
-    plt.ylabel("Potential (mv)")
-    plt.xlabel("Time (in ms)")
-    plt.grid()
-    plt.plot(t_values, v_values, "g-")
-
-    if title is None:
-        plt.title("Izhikevich's spiking neuron model")
-    else:
-        plt.title("Izhikevich's spiking neuron model ({0!s})".format(title))
-
-    plt.subplot(3, 1, 2)
-    plt.ylabel("Recovery (u)")
-    plt.xlabel("Time (in ms)")
-    plt.grid()
-    plt.plot(t_values, u_values, "r-")
-
-    plt.subplot(3, 1, 3)
-    plt.ylabel("Current (I)")
-    plt.xlabel("Time (in ms)")
-    plt.grid()
-    plt.plot(t_values, I_values, "r-o")
-
-    if filename is not None:
-        plt.savefig(filename)
-
-    if view:
-        plt.show()
-        plt.close()
-        fig = None
-
-    return fig
 
 
 def plot_species(statistics, view=False, filename='speciation.svg'):
@@ -96,9 +49,9 @@ def plot_species(statistics, view=False, filename='speciation.svg'):
     fig, ax = plt.subplots()
     ax.stackplot(range(num_generations), *curves)
 
-    plt.title("Speciation")
-    plt.ylabel("Size per Species")
-    plt.xlabel("Generations")
+    plt.title("Especiação")
+    plt.ylabel("Tamanho por especie")
+    plt.xlabel("Gerações")
 
     plt.savefig(filename)
 
@@ -109,7 +62,7 @@ def plot_species(statistics, view=False, filename='speciation.svg'):
 
 
 def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False,
-             node_colors=None, fmt='svg'):
+             node_colors=None, fmt='png'):
     """ Receives a genome and draws a neural network with arbitrary topology. """
     # Attributes for network nodes.
     if graphviz is None:

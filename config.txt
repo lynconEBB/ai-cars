@@ -23,7 +23,7 @@ compatibility_weight_coefficient   = 0.5
 
 # network parameters
 num_hidden              = 0
-num_inputs              = 6
+num_inputs              = 11
 num_outputs             = 4
 
 # node activation options
